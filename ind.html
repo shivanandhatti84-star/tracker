@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shiva's Tier 1 Placement Tracker</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --surface3: #2a2a2a;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.15);
+    --text: #f0f0f0;
+    --text-sec: #888;
+    --text-muted: #555;
+    --accent: #4f8ef7;
+    --accent-bg: rgba(79,142,247,0.1);
+    --accent-border: rgba(79,142,247,0.3);
+    --green: #3ecf7a;
+    --green-bg: rgba(62,207,122,0.1);
+    --amber: #f5a623;
+    --amber-bg: rgba(245,166,35,0.08);
+    --red: #f76f6f;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .main { padding: 2rem; overflow-y: auto; }
+
+  /* Sidebar */
+  .sidebar-logo {
+    padding: 0 1.25rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 600; color: var(--text); }
+  .sidebar-logo p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .sidebar-overall {
+    padding: 0.75rem 1.25rem;
+    margin: 0 0.75rem 1rem;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius);
+  }
+  .sidebar-overall .label { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .sidebar-overall .big-pct { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .sidebar-overall .sub { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+  .overall-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .overall-bar-fill { height: 4px; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+  .nav-section { padding: 0 0.75rem; margin-bottom: 0.25rem; }
+  .nav-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 0.5rem; margin-bottom: 0.35rem; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-sec);
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent); }
+  .nav-item .nav-icon { font-size: 15px; width: 18px; flex-shrink: 0; }
+  .nav-item .nav-pct {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--surface3);
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-radius: 20px;
+  }
+  .nav-item.active .nav-pct { background: var(--accent-bg); color: var(--accent); }
+
+  /* Main content */
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { margin-bottom: 1.5rem; }
+  .page-title { font-size: 20px; font-weight: 600; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--text-sec); margin-top: 3px; }
+
+  /* Dashboard */
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .stat-val { font-size: 26px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+  .stat-card.blue .stat-val { color: var(--accent); }
+  .stat-card.green .stat-val { color: var(--green); }
+  .stat-card.amber .stat-val { color: var(--amber); }
+  .stat-card.red .stat-val { color: var(--red); }
+
+  .section-progress { margin-bottom: 1.5rem; }
+  .section-progress h3 { font-size: 13px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
+  .prog-row { margin-bottom: 10px; }
+  .prog-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .prog-name { font-size: 13px; color: var(--text); }
+  .prog-count { font-size: 11px; color: var(--text-muted); }
+  .prog-track { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .prog-fill { height: 6px; border-radius: 3px; transition: width 0.4s ease; }
+  .fill-blue { background: var(--accent); }
+  .fill-green { background: var(--green); }
+  .fill-amber { background: var(--amber); }
+  .fill-red { background: var(--red); }
+  .fill-purple { background: #a78bfa; }
+
+  /* Topic sections */
+  .topic-section { margin-bottom: 1.5rem; }
+  .topic-section-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .topic-section-header:hover { background: var(--surface2); }
+  .topic-section-header .ts-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .topic-section-header .ts-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface3); color: var(--text-sec);
+  }
+  .topic-section-header .ts-badge.done { background: var(--green-bg); color: var(--green); }
+  .topic-section-header .ts-chevron { color: var(--text-muted); transition: transform 0.2s; font-size: 12px; }
+  .topic-section-header.open .ts-chevron { transform: rotate(180deg); }
+  .topic-section-body {
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    overflow: hidden;
+    display: none;
+  }
+  .topic-section-body.open { display: block; }
+
+  .topic-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  .topic-item:last-child { border-bottom: none; }
+  .topic-item:hover { background: var(--surface2); }
+  .topic-item.completed { opacity: 0.5; }
+  .topic-item.completed .topic-name { text-decoration: line-through; color: var(--text-muted); }
+
+  .checkbox {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 1.5px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .topic-item.completed .checkbox {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .checkbox-check { display: none; color: #000; font-size: 11px; font-weight: 700; }
+  .topic-item.completed .checkbox-check { display: block; }
+
+  .topic-info { flex: 1; min-width: 0; }
+  .topic-name { font-size: 13px; color: var(--text); }
+  .topic-detail { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .topic-badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    flex-shrink: 0; align-self: flex-start;
+    margin-top: 1px;
+  }
+  .tb-fire { background: rgba(247,111,111,0.15); color: #f76f6f; }
+  .tb-now { background: var(--accent-bg); color: var(--accent); }
+  .tb-next { background: var(--green-bg); color: var(--green); }
+  .tb-later { background: rgba(167,139,250,0.1); color: #a78bfa; }
+  .tb-ongoing { background: rgba(245,166,35,0.1); color: var(--amber); }
+
+  .topic-delete {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 14px; padding: 2px 4px;
+    border-radius: 4px; opacity: 0; transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .topic-item:hover .topic-delete { opacity: 1; }
+  .topic-delete:hover { color: var(--red); background: rgba(247,111,111,0.1); }
+
+  /* Add topic */
+  .add-topic-bar {
+    display: flex; gap: 8px; align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .add-topic-bar input {
+    flex: 1; background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 0.45rem 0.75rem; font-size: 13px; outline: none;
+    font-family: inherit;
+  }
+  .add-topic-bar input:focus { border-color: var(--accent); }
+  .add-topic-bar input::placeholder { color: var(--text-muted); }
+  .add-topic-bar select {
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 0.45rem 0.5rem; font-size: 12px; outline: none;
+    cursor: pointer; font-family: inherit;
+  }
+  .add-topic-bar select:focus { border-color: var(--accent); }
+  .btn-add {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); padding: 0.45rem 0.85rem;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    white-space: nowrap; font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .btn-add:hover { opacity: 0.85; }
+
+  /* Timeline page */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 7px; top: 0; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .tl-item { position: relative; margin-bottom: 1.25rem; }
+  .tl-dot {
+    position: absolute; left: -21px; top: 4px;
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid var(--bg); background: var(--border-strong);
+  }
+  .tl-item.active .tl-dot { background: var(--accent); }
+  .tl-item.done .tl-dot { background: var(--green); }
+  .tl-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+  }
+  .tl-item.active .tl-card { border-color: var(--accent-border); background: var(--accent-bg); }
+  .tl-month { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .tl-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .tl-tasks { list-style: none; }
+  .tl-tasks li { font-size: 12px; color: var(--text-sec); padding: 2px 0; }
+  .tl-tasks li::before { content: '→ '; color: var(--text-muted); }
+
+  /* Resources */
+  .res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .res-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+  }
+  .res-card-title { font-size: 13px; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+  .res-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .res-item:last-child { border-bottom: none; }
+  .res-name { font-size: 12px; color: var(--text); }
+  .res-link { font-size: 11px; color: var(--accent); }
+
+  /* Daily schedule */
+  .daily-table { width: 100%; border-collapse: collapse; }
+  .daily-table th { text-align: left; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  .daily-table td { padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .daily-table tr:last-child td { border-bottom: none; }
+  .daily-table tr:hover td { background: var(--surface2); }
+  .time-pill { background: var(--surface3); color: var(--text-sec); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; flex-direction: row; flex-wrap: wrap; padding: 1rem; gap: 8px; }
+    .sidebar-logo { padding: 0; border: none; margin: 0; width: 100%; }
+    .sidebar-overall { display: none; }
+    .nav-section { padding: 0; }
+    .nav-item { padding: 0.4rem 0.6rem; font-size: 12px; }
+    .main { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Placement Tracker</h1>
+      <p>Shiva · CS · Alva's · 5th sem</p>
+    </div>
+    <div class="sidebar-overall">
+      <div class="label">Overall progress</div>
+      <div class="big-pct" id="overall-pct">0%</div>
+      <div class="sub" id="overall-sub">0 of 0 topics done</div>
+      <div class="overall-bar"><div class="overall-bar-fill" id="overall-bar" style="width:0%"></div></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item active" onclick="showPage('dashboard')">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('timeline')">
+        <span class="nav-icon">🗓</span> Timeline
+      </button>
+      <button class="nav-item" onclick="showPage('daily')">
+        <span class="nav-icon">⏱</span> Daily schedule
+      </button>
+      <button class="nav-item" onclick="showPage('resources')">
+        <span class="nav-icon">📚</span> Resources
+      </button>
+    </div>
+    <div class="nav-section" style="margin-top:0.75rem;">
+      <div class="nav-label">Topics</div>
+      <button class="nav-item" onclick="showPage('dsa')" id="nav-dsa">
+        <span class="nav-icon">⚡</span> DSA in C++
+        <span class="nav-pct" id="npct-dsa">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('os')" id="nav-os">
+        <span class="nav-icon">🖥</span> OS
+        <span class="nav-pct" id="npct-os">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('dbms')" id="nav-dbms">
+        <span class="nav-icon">🗄</span> DBMS
+        <span class="nav-pct" id="npct-dbms">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('cn')" id="nav-cn">
+        <span class="nav-icon">🌐</span> CN
+        <span class="nav-pct" id="npct-cn">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('oop')" id="nav-oop">
+        <span class="nav-icon">🧩</span> OOP
+        <span class="nav-pct" id="npct-oop">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('react')" id="nav-react">
+        <span class="nav-icon">⚛️</span> React
+        <span class="nav-pct" id="npct-react">0%</span>
+      </button>
+      <button class="nav-item" onclick="showPage('projects')" id="nav-projects">
+        <span class="nav-icon">🚀</span> Projects
+        <span class="nav-pct" id="npct-projects">0%</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Your Tier 1 placement preparation at a glance</div>
+      </div>
+      <div class="dash-grid">
+        <div class="stat-card blue">
+          <div class="stat-val" id="stat-total">0</div>
+          <div class="stat-lbl">Topics total</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-val" id="stat-done">0</div>
+          <div class="stat-lbl">Completed</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-val" id="stat-left">0</div>
+          <div class="stat-lbl">Remaining</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-val">12</div>
+          <div class="stat-lbl">Months to placements</div>
+        </div>
+      </div>
+      <div class="section-progress">
+        <h3>Section progress</h3>
+        <div id="dash-progress-rows"></div>
+      </div>
+    </div>
+
+    <!-- DSA -->
+    <div class="page" id="page-dsa">
+      <div class="page-header">
+        <div class="page-title">⚡ DSA in C++</div>
+        <div class="page-sub">Most critical skill — gates every Tier 1 interview. Follow Striver's A2Z sheet.</div>
+      </div>
+      <div id="sections-dsa"></div>
+    </div>
+
+    <!-- OS -->
+    <div class="page" id="page-os">
+      <div class="page-header">
+        <div class="page-title">🖥 Operating Systems</div>
+        <div class="page-sub">Revise alongside coursework. Focus on interview-depth, not just theory.</div>
+      </div>
+      <div id="sections-os"></div>
+    </div>
+
+    <!-- DBMS -->
+    <div class="page" id="page-dbms">
+      <div class="page-header">
+        <div class="page-title">🗄 DBMS</div>
+        <div class="page-sub">SQL writing is as important as theory. Practice on HackerRank SQL track.</div>
+      </div>
+      <div id="sections-dbms"></div>
+    </div>
+
+    <!-- CN -->
+    <div class="page" id="page-cn">
+      <div class="page-header">
+        <div class="page-title">🌐 Computer Networks</div>
+        <div class="page-sub">Extra important for Juniper Networks. Know the "what happens at google.com" answer cold.</div>
+      </div>
+      <div id="sections-cn"></div>
+    </div>
+
+    <!-- OOP -->
+    <div class="page" id="page-oop">
+      <div class="page-header">
+        <div class="page-title">🧩 OOP</div>
+        <div class="page-sub">Use your IMS and FitLife projects as real examples during interviews.</div>
+      </div>
+      <div id="sections-oop"></div>
+    </div>
+
+    <!-- React -->
+    <div class="page" id="page-react">
+      <div class="page-header">
+        <div class="page-title">⚛️ React</div>
+        <div class="page-sub">Your frontend stack for IMS and future projects. Know it deep enough to defend design choices in interviews.</div>
+      </div>
+      <div id="sections-react"></div>
+    </div>
+
+    <!-- Projects -->
+    <div class="page" id="page-projects">
+      <div class="page-header">
+        <div class="page-title">🚀 Projects & Internship</div>
+        <div class="page-sub">Your differentiator on resume. Existing projects are strong — keep adding.</div>
+      </div>
+      <div id="sections-projects"></div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="page" id="page-timeline">
+      <div class="page-header">
+        <div class="page-title">🗓 Month-by-month plan</div>
+        <div class="page-sub">12 months to Tier 1 placements. Stay on track.</div>
+      </div>
+      <div class="timeline">
+        <div class="tl-item active">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 1 — NOW</div>
+            <div class="tl-title">C++ STL + Arrays + Strings</div>
+            <ul class="tl-tasks">
+              <li>Watch Striver's STL video (YouTube)</li>
+              <li>Start Striver's A2Z sheet from the beginning</li>
+              <li>Solve LC Easy — Arrays and Strings</li>
+              <li>Apply to campus startup internship this week</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 2</div>
+            <div class="tl-title">Recursion deep dive</div>
+            <ul class="tl-tasks">
+              <li>Spend full 3–4 weeks on recursion — don't rush</li>
+              <li>25 LC Easy problems done</li>
+              <li>Start OS revision on weekends (Neso Academy)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 3</div>
+            <div class="tl-title">LinkedList, Stack, Queue</div>
+            <ul class="tl-tasks">
+              <li>Implement manually first, then use STL</li>
+              <li>60 LC Easy done — start Medium</li>
+              <li>DBMS revision (Gate Smashers + HackerRank SQL)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 4</div>
+            <div class="tl-title">Binary Search + Trees</div>
+            <ul class="tl-tasks">
+              <li>BS is deeper than it looks — don't underestimate</li>
+              <li>80 LC total (Easy + Medium)</li>
+              <li>CN revision starts (Kurose & Ross + Neso)</li>
+              <li>Internship should be active or confirmed</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 5–6</div>
+            <div class="tl-title">Graphs + DP begins</div>
+            <ul class="tl-tasks">
+              <li>BFS, DFS, Dijkstra, basic DP patterns</li>
+              <li>110 LC total</li>
+              <li>OOP revision using your own codebase</li>
+              <li>Start GenAI mini project (2–3 weeks)</li>
+              <li>Resume first draft</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 7–9</div>
+            <div class="tl-title">Heaps, Tries, Backtracking + company prep</div>
+            <ul class="tl-tasks">
+              <li>140 LC total</li>
+              <li>System design basics (client-server, REST, DB concepts)</li>
+              <li>Amazon, Juniper, TI specific question patterns</li>
+            </ul>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-card">
+            <div class="tl-month">Month 10–12</div>
+            <div class="tl-title">Full prep mode — mock interviews + apply</div>
+            <ul class="tl-tasks">
+              <li>155+ LC problems done</li>
+              <li>Weekly mock interviews on Pramp</li>
+              <li>Resume polished and reviewed</li>
+              <li>Apply Tier 1 — Amazon, Juniper, TI, Samsung</li>
+              <li>Tier 2 as backup — Deloitte, Mercedes, Tata Elxsi</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Schedule -->
+    <div class="page" id="page-daily">
+      <div class="page-header">
+        <div class="page-title">⏱ Daily schedule</div>
+        <div class="page-sub">90 min minimum every day. No exceptions — even on exam days, do 45 min.</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.5rem;">
+        <table class="daily-table">
+          <thead>
+            <tr>
+              <th>Duration</th>
+              <th>Activity</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="time-pill">30 min</span></td>
+              <td>Learn concept — Striver video or topic explanation</td>
+              <td style="color:var(--accent);font-size:12px;">Concept</td>
+            </tr>
+            <tr>
+              <td><span class="time-pill">45 min</span></td>
+              <td>Solve 1–2 problems — struggle 20 min before checking solution</td>
+              <td style="color:var(--green);font-size:12px;">Practice</td>
+            </tr>
+            <tr>
+              <td><span class="time-pill">15 min</span></td>
+              <td>Review solution, note time complexity, revise yesterday's problem</td>
+              <td style="color:var(--amber);font-size:12px;">Review</td>
+            </tr>
+            <tr>
+              <td><span class="time-pill">+30 min</span></td>
+              <td>Weekend only — Core CS revision. Rotate: OS → DBMS → CN → OOP each week</td>
+              <td style="color:#a78bfa;font-size:12px;">CS subjects</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:var(--radius);padding:1rem;">
+        <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:4px;">The rule that matters most</div>
+        <div style="font-size:13px;color:var(--text-sec);line-height:1.6;">Consistency beats intensity. 90 min every day for 12 months = 540 hours of focused prep. Students who land Tier 1 from your campus aren't exceptional — they just never stopped showing up.</div>
+      </div>
+    </div>
+
+    <!-- Resources -->
+    <div class="page" id="page-resources">
+      <div class="page-header">
+        <div class="page-title">📚 Resources</div>
+        <div class="page-sub">One resource per skill. Don't mix — depth beats breadth.</div>
+      </div>
+      <div class="res-grid">
+        <div class="res-card">
+          <div class="res-card-title">⚡ DSA</div>
+          <div class="res-item"><span class="res-name">Striver's A2Z sheet</span><span class="res-link">takeuforward.org</span></div>
+          <div class="res-item"><span class="res-name">Striver's STL video</span><span class="res-link">YouTube</span></div>
+          <div class="res-item"><span class="res-name">LeetCode practice</span><span class="res-link">leetcode.com</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">🖥 OS + CN</div>
+          <div class="res-item"><span class="res-name">Neso Academy</span><span class="res-link">YouTube</span></div>
+          <div class="res-item"><span class="res-name">Kurose & Ross book</span><span class="res-link">Already have it</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">🗄 DBMS + SQL</div>
+          <div class="res-item"><span class="res-name">Gate Smashers</span><span class="res-link">YouTube</span></div>
+          <div class="res-item"><span class="res-name">HackerRank SQL track</span><span class="res-link">hackerrank.com</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">🎯 Interview prep</div>
+          <div class="res-item"><span class="res-name">Pramp mock interviews</span><span class="res-link">pramp.com</span></div>
+          <div class="res-item"><span class="res-name">LeetCode contests</span><span class="res-link">Weekly + Biweekly</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">🚀 Internship</div>
+          <div class="res-item"><span class="res-name">Campus startup incubation</span><span class="res-link">CTIE / placement cell</span></div>
+          <div class="res-item"><span class="res-name">LinkedIn + Internshala</span><span class="res-link">Off-campus backup</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">⚛️ React</div>
+          <div class="res-item"><span class="res-name">Official React docs (react.dev)</span><span class="res-link">react.dev</span></div>
+          <div class="res-item"><span class="res-name">React Router docs</span><span class="res-link">reactrouter.com</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-card-title">🤖 GenAI project</div>
+          <div class="res-item"><span class="res-name">Anthropic API</span><span class="res-link">console.anthropic.com</span></div>
+          <div class="res-item"><span class="res-name">OpenAI API</span><span class="res-link">platform.openai.com</span></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const DATA = {
+  dsa: {
+    label: 'DSA in C++',
+    color: 'fill-blue',
+    sections: [
+      {
+        title: 'C++ STL crash course',
+        items: [
+          { name: 'Watch Striver STL video (3hr)', detail: 'YouTube — do this before anything else', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'vector — push_back, size, indexing', detail: 'Most used STL container', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'map and unordered_map', detail: 'Ordered vs hash map — know when to use each', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'set and unordered_set', detail: 'Unique elements, fast lookup', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'stack, queue, priority_queue', detail: 'Know push/pop/top operations', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'pair<> and auto keyword', detail: 'Very common in DSA code', badge: 'tb-fire', badgeText: 'Week 1' },
+          { name: 'sort() with custom comparator', detail: 'Used in almost every interview problem', badge: 'tb-fire', badgeText: 'Week 1' },
+        ]
+      },
+      {
+        title: 'Arrays + Strings',
+        items: [
+          { name: 'Prefix sum technique', detail: 'Range sum queries, subarray problems', badge: 'tb-fire', badgeText: 'Week 2–3' },
+          { name: 'Two pointer approach', detail: 'Pair sum, container with most water', badge: 'tb-fire', badgeText: 'Week 2–3' },
+          { name: 'Sliding window', detail: 'Max subarray, longest substring without repeat', badge: 'tb-fire', badgeText: 'Week 2–3' },
+          { name: 'Frequency map with unordered_map', detail: 'Count characters, anagram check', badge: 'tb-fire', badgeText: 'Week 2–3' },
+          { name: 'Kadane\'s algorithm (max subarray)', detail: 'Classic problem — must know', badge: 'tb-fire', badgeText: 'Week 2–3' },
+          { name: 'String manipulation basics', detail: 'Reverse, palindrome, rotation', badge: 'tb-fire', badgeText: 'Week 2–3' },
+        ]
+      },
+      {
+        title: 'Recursion',
+        items: [
+          { name: 'Recursion basics — base case and stack', detail: 'Understand call stack before writing code', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'Print 1 to N and N to 1 recursively', detail: 'Basic warmup', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'Factorial and Fibonacci', detail: 'With and without memoization', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'Sum of digits, power(x,n)', detail: 'Standard recursion patterns', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'Subset generation', detail: 'Foundation for backtracking', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'String permutations', detail: 'Key recursive thinking exercise', badge: 'tb-now', badgeText: 'Month 1–2' },
+          { name: 'Merge sort (recursive)', detail: 'Understand divide and conquer', badge: 'tb-now', badgeText: 'Month 1–2' },
+        ]
+      },
+      {
+        title: 'LinkedList, Stack, Queue',
+        items: [
+          { name: 'Implement singly LinkedList from scratch', detail: 'Insert, delete, traverse', badge: 'tb-now', badgeText: 'Month 2–3' },
+          { name: 'Reverse a LinkedList', detail: 'Iterative and recursive both', badge: 'tb-now', badgeText: 'Month 2–3' },
+          { name: 'Detect cycle in LinkedList (Floyd\'s)', detail: 'Classic interview problem', badge: 'tb-now', badgeText: 'Month 2–3' },
+          { name: 'Find middle of LinkedList', detail: 'Slow-fast pointer technique', badge: 'tb-now', badgeText: 'Month 2–3' },
+          { name: 'Stack using array and STL', detail: 'Valid parentheses, next greater element', badge: 'tb-now', badgeText: 'Month 2–3' },
+          { name: 'Queue using array and STL', detail: 'BFS uses queue — important connection', badge: 'tb-now', badgeText: 'Month 2–3' },
+        ]
+      },
+      {
+        title: 'Binary Search + Trees',
+        items: [
+          { name: 'Binary search — iterative and recursive', detail: 'On sorted array, O(log n)', badge: 'tb-now', badgeText: 'Month 3–4' },
+          { name: 'Search in rotated sorted array', detail: 'LC Medium — very common', badge: 'tb-now', badgeText: 'Month 3–4' },
+          { name: 'Find first and last position', detail: 'BS variant — lower/upper bound', badge: 'tb-now', badgeText: 'Month 3–4' },
+          { name: 'Binary Tree traversals — inorder, preorder, postorder', detail: 'Recursive and iterative', badge: 'tb-next', badgeText: 'Month 4' },
+          { name: 'Height and diameter of binary tree', detail: 'Classic DFS problems', badge: 'tb-next', badgeText: 'Month 4' },
+          { name: 'Level order traversal (BFS on tree)', detail: 'Uses queue — important bridge', badge: 'tb-next', badgeText: 'Month 4' },
+          { name: 'BST — search, insert, delete', detail: 'Understand BST property deeply', badge: 'tb-next', badgeText: 'Month 4' },
+          { name: 'Validate BST', detail: 'Very common LC Medium', badge: 'tb-next', badgeText: 'Month 4' },
+        ]
+      },
+      {
+        title: 'Graphs',
+        items: [
+          { name: 'Graph representation — adjacency list and matrix', detail: 'Know both, prefer list for sparse graphs', badge: 'tb-next', badgeText: 'Month 4–6' },
+          { name: 'BFS — breadth first search', detail: 'Shortest path in unweighted graph', badge: 'tb-next', badgeText: 'Month 4–6' },
+          { name: 'DFS — depth first search', detail: 'Connected components, cycle detection', badge: 'tb-next', badgeText: 'Month 4–6' },
+          { name: 'Detect cycle in directed graph', detail: 'DFS with visited + recursion stack', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Topological sort', detail: 'Kahn\'s algorithm + DFS approach', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Dijkstra\'s algorithm', detail: 'Shortest path in weighted graph — priority_queue', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Number of islands (BFS/DFS)', detail: 'Very common graph LC problem', badge: 'tb-next', badgeText: 'Month 5–6' },
+        ]
+      },
+      {
+        title: 'Dynamic Programming',
+        items: [
+          { name: 'DP mindset — overlapping subproblems + optimal substructure', detail: 'Understand before solving', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Fibonacci with memoization and tabulation', detail: 'Starter DP — both top-down and bottom-up', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Climbing stairs (LC Easy)', detail: 'Classic intro DP', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: '0/1 Knapsack', detail: 'Foundation of many DP problems', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Longest Common Subsequence (LCS)', detail: '2D DP — very common', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Longest Increasing Subsequence (LIS)', detail: 'O(n log n) and O(n²) both', badge: 'tb-next', badgeText: 'Month 6' },
+          { name: 'Coin change problem', detail: 'Unbounded knapsack variant', badge: 'tb-next', badgeText: 'Month 6' },
+        ]
+      },
+      {
+        title: 'Heaps, Tries, Backtracking',
+        items: [
+          { name: 'Min and Max heap using priority_queue', detail: 'Top K elements, merge K sorted lists', badge: 'tb-later', badgeText: 'Month 7+' },
+          { name: 'Kth largest element', detail: 'Very common heap problem', badge: 'tb-later', badgeText: 'Month 7+' },
+          { name: 'Trie — insert and search', detail: 'Prefix-based problems', badge: 'tb-later', badgeText: 'Month 7+' },
+          { name: 'N-Queens problem', detail: 'Classic backtracking', badge: 'tb-later', badgeText: 'Month 7+' },
+          { name: 'Sudoku solver', detail: 'Advanced backtracking', badge: 'tb-later', badgeText: 'Month 7+' },
+          { name: 'Word search in grid', detail: 'DFS + backtracking combo', badge: 'tb-later', badgeText: 'Month 7+' },
+        ]
+      }
+    ]
+  },
+  os: {
+    label: 'Operating Systems',
+    color: 'fill-green',
+    sections: [
+      {
+        title: 'Processes and Threads',
+        items: [
+          { name: 'Process vs Thread — difference with real examples', detail: 'Asked in almost every interview', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Process states — new, ready, running, waiting, terminated', detail: 'Draw the state diagram', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Context switching', detail: 'What happens, overhead involved', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'User thread vs Kernel thread', detail: 'Mapping models — 1:1, M:1, M:N', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'What happens when you run a program', detail: 'Full flow — compilation to execution', badge: 'tb-fire', badgeText: 'Priority' },
+        ]
+      },
+      {
+        title: 'CPU Scheduling',
+        items: [
+          { name: 'FCFS — First Come First Serve', detail: 'Simple, convoy effect', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'SJF — Shortest Job First (preemptive + non-preemptive)', detail: 'SRTF is preemptive SJF', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Round Robin with time quantum', detail: 'Numericals are asked', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Priority scheduling', detail: 'Starvation and aging solution', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Calculate: turnaround time, waiting time, CPU utilization', detail: 'Practice numericals', badge: 'tb-fire', badgeText: 'Priority' },
+        ]
+      },
+      {
+        title: 'Deadlocks',
+        items: [
+          { name: '4 conditions for deadlock (Coffman conditions)', detail: 'Mutual exclusion, hold and wait, no preemption, circular wait', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Deadlock prevention strategies', detail: 'Break one of the 4 conditions', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Deadlock avoidance — Banker\'s algorithm', detail: 'Safe state concept', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Deadlock detection and recovery', detail: 'Resource allocation graph', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Memory Management',
+        items: [
+          { name: 'Paging — page table, page size, page fault', detail: 'Very commonly asked', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Segmentation vs Paging', detail: 'Difference and trade-offs', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Virtual memory — why and how', detail: 'Allows running larger programs', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'TLB — Translation Lookaside Buffer', detail: 'Page table cache', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Page replacement — FIFO, LRU, Optimal', detail: 'LRU is most asked', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Synchronization',
+        items: [
+          { name: 'Race condition — what and why it matters', detail: 'Classic example with shared counter', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Mutex vs Semaphore — when to use which', detail: 'Asked directly in interviews', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Producer-Consumer problem', detail: 'Classic synchronization problem', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Readers-Writers problem', detail: 'Shared resource access', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Dining Philosophers problem', detail: 'Deadlock illustration', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      }
+    ]
+  },
+  dbms: {
+    label: 'DBMS',
+    color: 'fill-amber',
+    sections: [
+      {
+        title: 'SQL — Write actual queries',
+        items: [
+          { name: 'SELECT with WHERE, ORDER BY, LIMIT', detail: 'Basic retrieval — must be fluent', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'GROUP BY and HAVING', detail: 'Aggregate functions — COUNT, SUM, AVG, MAX, MIN', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN', detail: 'Most asked SQL topic in interviews', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Subqueries and nested SELECT', detail: 'IN, EXISTS, correlated subqueries', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Window functions — ROW_NUMBER, RANK, DENSE_RANK', detail: 'Advanced SQL — asked in product companies', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Practice 20+ SQL problems on HackerRank', detail: 'hackerrank.com/domains/sql', badge: 'tb-fire', badgeText: 'Priority' },
+        ]
+      },
+      {
+        title: 'Database Design',
+        items: [
+          { name: 'ER diagram — entities, relationships, attributes', detail: 'Can you design a schema from scratch?', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Primary key, Foreign key, Unique key', detail: 'Know constraints and their purpose', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Normalization — 1NF, 2NF, 3NF with examples', detail: 'Reduce redundancy — explain with real table', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'BCNF — Boyce-Codd Normal Form', detail: 'Stricter than 3NF', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Denormalization — when and why', detail: 'Trade-off for performance', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Transactions and ACID',
+        items: [
+          { name: 'ACID — Atomicity, Consistency, Isolation, Durability', detail: 'Explain each with a real bank transfer example', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Transaction states — active, partially committed, committed, failed', detail: 'State diagram', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Isolation levels — Read Uncommitted, Read Committed, Repeatable Read, Serializable', detail: 'Trade-off between consistency and performance', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Dirty read, Non-repeatable read, Phantom read', detail: 'Problems each isolation level solves', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Indexing and Performance',
+        items: [
+          { name: 'What is an index and why it helps', detail: 'Like a book index — faster lookup', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'B-Tree index structure', detail: 'How MySQL stores indexes internally', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Clustered vs non-clustered index', detail: 'Physical vs logical ordering', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'When NOT to use an index', detail: 'Small tables, high write frequency', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'SQL vs NoSQL — when to choose what', detail: 'Schema flexibility, consistency trade-offs', badge: 'tb-fire', badgeText: 'Priority' },
+        ]
+      }
+    ]
+  },
+  cn: {
+    label: 'Computer Networks',
+    color: 'fill-purple',
+    sections: [
+      {
+        title: 'The big question — what happens when you type google.com?',
+        items: [
+          { name: 'Step 1: Browser checks cache, then OS cache', detail: 'DNS resolution starts here', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Step 2: DNS resolution — recursive query to root → TLD → authoritative NS', detail: 'Get the IP for google.com', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Step 3: TCP 3-way handshake with server', detail: 'SYN → SYN-ACK → ACK', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Step 4: TLS handshake for HTTPS', detail: 'Certificate exchange, session key generation', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Step 5: HTTP GET request sent', detail: 'Headers, method, path', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Step 6: Server responds, browser renders', detail: 'HTML parsing, CSS, JS loading', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'TCP/IP and Protocols',
+        items: [
+          { name: 'OSI model — 7 layers with function of each', detail: 'Physical, Data Link, Network, Transport, Session, Presentation, Application', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'TCP vs UDP — difference, use cases', detail: 'TCP: reliable, ordered. UDP: fast, no guarantee', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'TCP 3-way handshake and 4-way termination', detail: 'Draw and explain both', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'TCP congestion control', detail: 'Slow start, congestion avoidance, fast retransmit', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'HTTP vs HTTPS', detail: 'TLS layer, certificate authority, encryption', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'HTTP methods — GET, POST, PUT, DELETE, PATCH', detail: 'REST API context — very relevant', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'HTTP status codes — 2xx, 3xx, 4xx, 5xx', detail: '200, 201, 301, 400, 401, 403, 404, 500', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'IP Addressing and Routing',
+        items: [
+          { name: 'IPv4 address structure — 4 octets, classes A/B/C', detail: 'Subnet mask concept', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Private vs public IP', detail: '192.168.x.x, 10.x.x.x are private', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'NAT — Network Address Translation', detail: 'How multiple devices share one public IP', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Routing — static vs dynamic', detail: 'OSPF, BGP concepts', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'ARP — Address Resolution Protocol', detail: 'IP to MAC address mapping', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Application Layer',
+        items: [
+          { name: 'DNS — how it works step by step', detail: 'Hierarchical — root, TLD, authoritative', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'DHCP — dynamic host configuration', detail: 'How you get an IP automatically', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Cookies vs sessions vs tokens (JWT)', detail: 'Auth context — very relevant to your projects', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'WebSockets vs HTTP', detail: 'Real-time bidirectional vs request-response', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'CDN — Content Delivery Network', detail: 'Edge servers, caching, latency reduction', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      }
+    ]
+  },
+  oop: {
+    label: 'OOP',
+    color: 'fill-red',
+    sections: [
+      {
+        title: '4 Pillars — with C++ code examples',
+        items: [
+          { name: 'Encapsulation — data hiding with classes', detail: 'Private members + public getters/setters', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Abstraction — hide complexity, show interface', detail: 'Abstract classes, interfaces', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Inheritance — single, multiple, multilevel', detail: 'Code reuse, is-a relationship', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Polymorphism — compile time vs runtime', detail: 'Overloading vs overriding + virtual functions', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Virtual functions and vtable in C++', detail: 'How runtime polymorphism works internally', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Classes and Objects',
+        items: [
+          { name: 'Constructor types — default, parameterized, copy', detail: 'Know all three with C++ code', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Destructor and its importance', detail: 'Memory cleanup in C++', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Static members and methods', detail: 'Belong to class, not object', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Friend functions and friend classes', detail: 'Access private members', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Operator overloading', detail: 'Custom behavior for +, ==, << etc', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Abstract Classes and Interfaces',
+        items: [
+          { name: 'Abstract class vs Interface (pure virtual in C++)', detail: 'When to use which — very common question', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Pure virtual functions in C++', detail: '= 0 syntax, cannot instantiate abstract class', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Method overloading vs overriding', detail: 'Compile time vs runtime resolution', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Diamond problem in multiple inheritance', detail: 'Why it\'s a problem, virtual inheritance solution', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Design Patterns',
+        items: [
+          { name: 'Singleton pattern — only one instance', detail: 'Database connection, config manager', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Factory pattern — object creation abstraction', detail: 'Create objects without specifying exact class', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Observer pattern — event-driven', detail: 'Publisher-subscriber model', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'SOLID principles — basics of each', detail: 'Single Responsibility, Open/Closed, Liskov, Interface Segregation, Dependency Inversion', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Interview scenario questions',
+        items: [
+          { name: 'Design a parking lot using OOP', detail: 'Practice explaining — levels, spots, vehicles', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Design a library management system', detail: 'Books, users, checkout, return', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Explain IMS project design decisions', detail: 'Your own MERN project — student, coordinator, mentor, HOD roles', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Explain FitLife project OOP coverage', detail: 'Collections, Lambda, Streams, JPA, design patterns', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      }
+    ]
+  },
+  react: {
+    label: 'React',
+    color: 'fill-blue',
+    sections: [
+      {
+        title: 'React Fundamentals',
+        items: [
+          { name: 'JSX — syntax, expressions, embedding values', detail: 'How JSX compiles to React.createElement calls', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Components — functional vs class', detail: 'Functional is the modern standard, know why', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Props — passing data down, prop types', detail: 'Read-only, parent to child only', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'State — useState hook basics', detail: 'Local component state, triggers re-render', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Conditional rendering', detail: 'Ternary, &&, early return patterns', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Lists and keys', detail: 'Why keys matter for reconciliation', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Event handling in React', detail: 'onClick, onChange, synthetic events', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Controlled vs uncontrolled inputs', detail: 'Form handling — controlled is the React way', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Hooks Deep Dive',
+        items: [
+          { name: 'useEffect — dependency array, cleanup function', detail: 'Side effects, API calls, subscriptions', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'useContext — avoiding prop drilling', detail: 'Share state across component tree', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'useRef — DOM access, mutable values', detail: 'Doesn\'t trigger re-render unlike state', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'useMemo and useCallback', detail: 'Memoization for performance — know when NOT to use too', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Custom hooks — extracting reusable logic', detail: 'Write one from scratch, e.g. useFetch', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Rules of hooks — why they exist', detail: 'Top level only, same order every render', badge: 'tb-fire', badgeText: 'Priority' },
+        ]
+      },
+      {
+        title: 'State Management & Data Flow',
+        items: [
+          { name: 'Lifting state up', detail: 'Sharing state between sibling components', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Context API — Provider and Consumer pattern', detail: 'Built-in alternative to external state libraries', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Intro to Redux or Zustand', detail: 'When component state and Context aren\'t enough', badge: 'tb-next', badgeText: 'Next' },
+          { name: 'Prop drilling problem and solutions', detail: 'Recognize it, explain trade-offs of each fix', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Routing & API Integration',
+        items: [
+          { name: 'React Router — Routes, Route, Link, useNavigate', detail: 'Client-side routing fundamentals', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Dynamic routes and route params', detail: 'useParams, nested routes', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Fetching data — fetch API vs axios', detail: 'Inside useEffect, handling promises', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Loading and error states', detail: 'Good UX while async data resolves', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Authenticated requests — sending tokens', detail: 'JWT in headers — ties into your IMS auth flow', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Performance & Interview Patterns',
+        items: [
+          { name: 'Virtual DOM — what it is and why it\'s fast', detail: 'Classic interview question', badge: 'tb-fire', badgeText: 'Priority' },
+          { name: 'Reconciliation algorithm basics', detail: 'How React decides what to re-render', badge: 'tb-now', badgeText: 'Important' },
+          { name: 'Code splitting and lazy loading', detail: 'React.lazy, Suspense', badge: 'tb-next', badgeText: 'Next' },
+          { name: 'React.memo — preventing unnecessary re-renders', detail: 'When it helps vs adds overhead', badge: 'tb-next', badgeText: 'Next' },
+          { name: 'Component lifecycle in functional components', detail: 'Map class lifecycle methods to useEffect', badge: 'tb-now', badgeText: 'Important' },
+        ]
+      },
+      {
+        title: 'Project Tie-in',
+        items: [
+          { name: 'Map IMS frontend architecture to React concepts', detail: 'Component tree, state flow, routing for student/coordinator/mentor/HOD views', badge: 'tb-fire', badgeText: 'Do this now' },
+          { name: 'Practice explaining one React design decision from IMS', detail: 'Why you chose Context over prop drilling, or similar', badge: 'tb-fire', badgeText: 'Do this now' },
+        ]
+      }
+    ]
+  },
+  projects: {
+    label: 'Projects & Internship',
+    color: 'fill-green',
+    sections: [
+      {
+        title: 'Existing projects — articulate them interview-ready',
+        items: [
+          { name: 'IMS — explain full architecture (MERN)', detail: 'Student, coordinator, mentor, HOD roles — why each design decision', badge: 'tb-done', badgeText: 'Built' },
+          { name: 'AgriVision — explain ML pipeline', detail: 'MobileNetV2, ExG/NDVI heatmap, Flask backend', badge: 'tb-done', badgeText: 'Built' },
+          { name: 'ARIA — explain detection modules', detail: 'Text, image, audio, video detection — course chapter mapping', badge: 'tb-done', badgeText: 'Built' },
+          { name: 'NeuroGolf Kaggle — explain ONNX approach', detail: 'ARC-style grid tasks, opset constraints, submission packaging', badge: 'tb-done', badgeText: 'Built' },
+          { name: 'Practice explaining each project in 3 min out loud', detail: 'Problem → approach → tech stack → challenges → results', badge: 'tb-fire', badgeText: 'Do this now' },
+        ]
+      },
+      {
+        title: 'Internship — apply now',
+        items: [
+          { name: 'Visit CTIE / placement cell — ask about campus startups', detail: '38 companies incubated on campus, low competition', badge: 'tb-fire', badgeText: 'This week' },
+          { name: 'Update LinkedIn profile with all projects', detail: 'Recruiters check LinkedIn before interviews', badge: 'tb-fire', badgeText: 'This week' },
+          { name: 'Apply on Internshala for off-campus options', detail: 'Backend, fullstack, or any CS internship as backup', badge: 'tb-now', badgeText: 'Month 1' },
+          { name: 'Apply to REU program on campus', detail: 'Research Experience for Undergraduates — official KLE Tech initiative', badge: 'tb-now', badgeText: 'Month 1' },
+          { name: 'Secure one internship (stipend or not)', detail: 'Even unpaid counts — real work experience is the goal', badge: 'tb-now', badgeText: 'Month 1–2' },
+        ]
+      },
+      {
+        title: 'New project — GenAI mini project (6th sem)',
+        items: [
+          { name: 'Choose a GenAI project idea', detail: 'Document Q&A, resume analyzer, or chatbot with memory', badge: 'tb-next', badgeText: 'Month 5' },
+          { name: 'Set up Anthropic or OpenAI API', detail: '10 min setup — get API key, test basic call', badge: 'tb-next', badgeText: 'Month 5' },
+          { name: 'Build core functionality (2–3 weeks)', detail: 'Working demo with basic UI', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: 'Deploy on Vercel (frontend) + Render (backend)', detail: 'You already know this stack from IMS', badge: 'tb-next', badgeText: 'Month 6' },
+          { name: 'Push to GitHub with good README', detail: 'Recruiters check GitHub — make it readable', badge: 'tb-next', badgeText: 'Month 6' },
+        ]
+      },
+      {
+        title: 'LeetCode milestones',
+        items: [
+          { name: 'First 25 LC Easy problems done', detail: 'Arrays and Strings focus', badge: 'tb-fire', badgeText: 'Month 2' },
+          { name: '60 LC Easy done — start Medium', detail: 'Transition point', badge: 'tb-now', badgeText: 'Month 3' },
+          { name: '80 LC total (Easy + Medium)', detail: 'Good momentum', badge: 'tb-now', badgeText: 'Month 4' },
+          { name: '110 LC total', detail: 'Graphs and DP entering', badge: 'tb-next', badgeText: 'Month 5–6' },
+          { name: '140 LC total', detail: 'Company-specific prep begins', badge: 'tb-next', badgeText: 'Month 7–9' },
+          { name: '155+ LC total', detail: 'Placement-ready target', badge: 'tb-later', badgeText: 'Month 10–12' },
+        ]
+      }
+    ]
+  }
+};
+
+let state = JSON.parse(localStorage.getItem('placement_tracker') || '{}');
+
+function save() {
+  localStorage.setItem('placement_tracker', JSON.stringify(state));
+}
+
+function getKey(page, secIdx, itemIdx) {
+  return `${page}_${secIdx}_${itemIdx}`;
+}
+
+function isChecked(page, secIdx, itemIdx) {
+  return !!state[getKey(page, secIdx, itemIdx)];
+}
+
+function toggle(page, secIdx, itemIdx) {
+  const key = getKey(page, secIdx, itemIdx);
+  state[key] = !state[key];
+  save();
+  renderAll();
+}
+
+function getProgress(page) {
+  const secs = DATA[page].sections;
+  let total = 0, done = 0;
+  secs.forEach((sec, si) => {
+    sec.items.forEach((_, ii) => {
+      total++;
+      if (isChecked(page, si, ii)) done++;
+    });
+  });
+  // also count custom items
+  const customs = state['custom_' + page] || [];
+  customs.forEach((c, ci) => {
+    total++;
+    if (state['custom_' + page + '_' + ci]) done++;
+  });
+  return { total, done };
+}
+
+function getAllProgress() {
+  let total = 0, done = 0;
+  Object.keys(DATA).forEach(page => {
+    const p = getProgress(page);
+    total += p.total;
+    done += p.done;
+  });
+  return { total, done };
+}
+
+function pct(done, total) {
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+const FILL_COLORS = {
+  dsa: 'fill-blue', os: 'fill-green', dbms: 'fill-amber',
+  cn: 'fill-purple', oop: 'fill-red', react: 'fill-blue', projects: 'fill-green'
+};
+
+function renderDashboard() {
+  const all = getAllProgress();
+  document.getElementById('overall-pct').textContent = pct(all.done, all.total) + '%';
+  document.getElementById('overall-sub').textContent = `${all.done} of ${all.total} topics done`;
+  document.getElementById('overall-bar').style.width = pct(all.done, all.total) + '%';
+  document.getElementById('stat-total').textContent = all.total;
+  document.getElementById('stat-done').textContent = all.done;
+  document.getElementById('stat-left').textContent = all.total - all.done;
+
+  const rows = document.getElementById('dash-progress-rows');
+  rows.innerHTML = '';
+  Object.keys(DATA).forEach(page => {
+    const p = getProgress(page);
+    const pc = pct(p.done, p.total);
+    rows.innerHTML += `
+      <div class="prog-row">
+        <div class="prog-meta">
+          <span class="prog-name">${DATA[page].label}</span>
+          <span class="prog-count">${p.done}/${p.total} · ${pc}%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill ${FILL_COLORS[page]}" style="width:${pc}%"></div></div>
+      </div>`;
+  });
+}
+
+function renderNavPcts() {
+  Object.keys(DATA).forEach(page => {
+    const p = getProgress(page);
+    const pc = pct(p.done, p.total);
+    const el = document.getElementById('npct-' + page);
+    if (el) el.textContent = pc + '%';
+  });
+}
+
+function renderPage(page) {
+  const container = document.getElementById('sections-' + page);
+  if (!container) return;
+  container.innerHTML = '';
+  const secs = DATA[page].sections;
+
+  secs.forEach((sec, si) => {
+    const done = sec.items.filter((_, ii) => isChecked(page, si, ii)).length;
+    const total = sec.items.length;
+    const allDone = done === total;
+    const openClass = (si === 0) ? 'open' : '';
+
+    const div = document.createElement('div');
+    div.className = 'topic-section';
+    div.innerHTML = `
+      <div class="topic-section-header ${openClass}" onclick="toggleSection(this)">
+        <span class="ts-title">${sec.title}</span>
+        <span class="ts-badge ${allDone ? 'done' : ''}">${done}/${total}</span>
+        <span class="ts-chevron">▼</span>
+      </div>
+      <div class="topic-section-body ${openClass}" id="body-${page}-${si}">
+        ${sec.items.map((item, ii) => {
+          const checked = isChecked(page, si, ii);
+          return `
+          <div class="topic-item ${checked ? 'completed' : ''}" onclick="toggle('${page}',${si},${ii})">
+            <div class="checkbox"><span class="checkbox-check">✓</span></div>
+            <div class="topic-info">
+              <div class="topic-name">${item.name}</div>
+              ${item.detail ? `<div class="topic-detail">${item.detail}</div>` : ''}
+            </div>
+            <span class="topic-badge ${item.badge}">${item.badgeText}</span>
+          </div>`;
+        }).join('')}
+        ${renderCustomItems(page, si)}
+      </div>
+      <div class="add-topic-bar">
+        <input type="text" placeholder="Add a topic to this section..." id="add-input-${page}-${si}" onkeydown="if(event.key==='Enter')addTopic('${page}',${si})">
+        <select id="add-badge-${page}-${si}">
+          <option value="tb-fire">Urgent</option>
+          <option value="tb-now" selected>Now</option>
+          <option value="tb-next">Next</option>
+          <option value="tb-later">Later</option>
+          <option value="tb-ongoing">Ongoing</option>
+        </select>
+        <button class="btn-add" onclick="addTopic('${page}',${si})">+ Add</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Global add section
+  const addSec = document.createElement('div');
+  addSec.className = 'topic-section';
+  addSec.innerHTML = `
+    <div class="topic-section-header" onclick="toggleSection(this)" style="border-radius:var(--radius);">
+      <span class="ts-title" style="color:var(--text-muted);">+ Add a new section</span>
+      <span class="ts-chevron">▼</span>
+    </div>
+    <div class="topic-section-body" style="border-radius:0 0 var(--radius) var(--radius);">
+      <div style="padding:0.75rem 1rem;display:flex;gap:8px;align-items:center;">
+        <input type="text" placeholder="Section name..." id="new-sec-name-${page}" style="flex:1;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.45rem 0.75rem;font-size:13px;outline:none;font-family:inherit;" onkeydown="if(event.key==='Enter')addSection('${page}')">
+        <button class="btn-add" onclick="addSection('${page}')">Create section</button>
+      </div>
+    </div>
+  `;
+  container.appendChild(addSec);
+}
+
+function renderCustomItems(page, si) {
+  const customs = (state['custom_items_' + page + '_' + si]) || [];
+  return customs.map((item, ci) => {
+    const key = 'custom_check_' + page + '_' + si + '_' + ci;
+    const checked = !!state[key];
+    return `
+    <div class="topic-item ${checked ? 'completed' : ''}" onclick="toggleCustom('${page}',${si},${ci})">
+      <div class="checkbox"><span class="checkbox-check">✓</span></div>
+      <div class="topic-info">
+        <div class="topic-name">${item.name}</div>
+      </div>
+      <span class="topic-badge ${item.badge}">${item.badgeText}</span>
+      <button class="topic-delete" onclick="event.stopPropagation();deleteCustom('${page}',${si},${ci})" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleCustom(page, si, ci) {
+  const key = 'custom_check_' + page + '_' + si + '_' + ci;
+  state[key] = !state[key];
+  save();
+  renderAll();
+}
+
+function deleteCustom(page, si, ci) {
+  const key = 'custom_items_' + page + '_' + si;
+  if (!state[key]) return;
+  state[key].splice(ci, 1);
+  // clean up check state
+  delete state['custom_check_' + page + '_' + si + '_' + ci];
+  save();
+  renderAll();
+}
+
+function addTopic(page, si) {
+  const input = document.getElementById(`add-input-${page}-${si}`);
+  const badge = document.getElementById(`add-badge-${page}-${si}`);
+  const name = input.value.trim();
+  if (!name) return;
+  const key = 'custom_items_' + page + '_' + si;
+  if (!state[key]) state[key] = [];
+  const badgeLabels = { 'tb-fire': 'Urgent', 'tb-now': 'Now', 'tb-next': 'Next', 'tb-later': 'Later', 'tb-ongoing': 'Ongoing' };
+  state[key].push({ name, badge: badge.value, badgeText: badgeLabels[badge.value] });
+  save();
+  renderAll();
+}
+
+function addSection(page) {
+  const input = document.getElementById('new-sec-name-' + page);
+  const name = input.value.trim();
+  if (!name) return;
+  const key = 'custom_sections_' + page;
+  if (!state[key]) state[key] = [];
+  state[key].push({ title: name, items: [] });
+  DATA[page].sections.push({ title: name, items: [] });
+  save();
+  renderAll();
+}
+
+function toggleSection(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const navEl = document.getElementById('nav-' + name);
+  if (navEl) navEl.classList.add('active');
+  else document.querySelector('.nav-item').classList.add('active');
+}
+
+function renderAll() {
+  renderDashboard();
+  renderNavPcts();
+  Object.keys(DATA).forEach(page => renderPage(page));
+}
+
+// Load custom sections from state
+function loadCustomSections() {
+  Object.keys(DATA).forEach(page => {
+    const key = 'custom_sections_' + page;
+    if (state[key]) {
+      state[key].forEach(sec => {
+        if (!DATA[page].sections.find(s => s.title === sec.title)) {
+          DATA[page].sections.push(sec);
+        }
+      });
+    }
+  });
+}
+
+loadCustomSections();
+renderAll();
+</script>
+</body>
+</html>
